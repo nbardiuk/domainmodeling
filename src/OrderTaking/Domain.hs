@@ -2,6 +2,9 @@
 
 module OrderTaking.Domain where
 
+import           Data.List.NonEmpty
+import           OrderTaking.UnitQuantity
+
 -- Product code related
 newtype WidgetCode =
   WidgetCode String
@@ -18,10 +21,6 @@ data ProductCode
   deriving (Show, Eq)
 
 -- Order Quantity related
-newtype UnitQuantity =
-  UnitQuantity Integer
-  deriving (Show, Eq)
-
 newtype KilogramQuantity =
   KilogramQuantity Double
   deriving (Show, Eq)
@@ -64,17 +63,17 @@ data BillingAmount =
   BillingAmount
   deriving (Show, Eq)
 
-data Order = Order
+data ValidatedOrder = ValidatedOrder
   { orderId         :: OrderId
   , customerId      :: CustomerId
-  , shippingAddress :: ShippingAddress
+  , shippingAddress :: ValidatedAddress
   , billingAddress  :: BillingAddress
-  , orderLines      :: [OrderLine]
+  , orderLines      :: NonEmpty OrderLine
   , amountToBill    :: BillingAmount
   } deriving (Show)
 
-instance Eq Order where
-  a == b = orderId (a :: Order) == orderId (b :: Order)
+instance Eq ValidatedOrder where
+  a == b = orderId (a :: ValidatedOrder) == orderId (b :: ValidatedOrder)
 
 data OrderLine = OrderLine
   { orderLineId   :: OrderLineId
@@ -90,7 +89,7 @@ instance Eq OrderLine where
 data UnvalidatedOrder = UnvalidatedOrder
   { orderId         :: String
   , customerInfo    :: String
-  , shippingAddress :: String
+  , shippingAddress :: UnvalidatedAddress
   , billingAddress  :: String
   , orderLines      :: [String]
   , amountToBill    :: String
@@ -98,6 +97,16 @@ data UnvalidatedOrder = UnvalidatedOrder
 
 instance Eq UnvalidatedOrder where
   a == b = orderId (a :: UnvalidatedOrder) == orderId (b :: UnvalidatedOrder)
+
+data UnvalidatedAddress =
+  UnvalidatedAddress
+  deriving (Show)
+
+data ValidatedAddress =
+  ValidatedAddress
+  deriving (Show)
+
+type AddressValidationService = UnvalidatedAddress -> Maybe ValidatedAddress
 
 data AcknowledgmentSent =
   AcknowledgmentSent
@@ -117,7 +126,7 @@ data PlaceOrderEvents = PlaceOrderEvents
   , billableOrderPlaced :: BillableOrderPlaced
   } deriving (Show, Eq)
 
-data PlaceOrderError =
+newtype PlaceOrderError =
   ValidationError [ValidationError]
 
 data ValidationError = VError
@@ -126,4 +135,4 @@ data ValidationError = VError
   } deriving (Show, Eq)
 
 --- The "Place Order" process
-type PlaceOrder = UnvalidatedOrder -> Either PlaceOrderEvents PlaceOrderError
+type PlaceOrder = UnvalidatedOrder -> Either PlaceOrderError PlaceOrderEvents
